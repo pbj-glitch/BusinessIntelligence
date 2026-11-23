@@ -41,32 +41,34 @@ st.markdown(
     f"""
     <style>
     .stApp {{ background-color: {CANVAS}; }}
-    h1, h2, h3 {{ color: {INK}; font-family: 'DejaVu Sans', sans-serif; }}
-    p, li {{ color: {SLATE}; font-size: 1.02rem; line-height: 1.6; }}
+
+    [data-testid="stMain"] h1 {{ color: {INK}; font-size: 2.3rem; line-height: 1.25; }}
+    [data-testid="stMain"] h2, [data-testid="stMain"] h3 {{ color: {INK}; font-size: 1.5rem; }}
+    [data-testid="stMain"] p, [data-testid="stMain"] li {{ color: {SLATE}; font-size: 1.25rem; line-height: 1.7; }}
+    code {{ font-size: 1.05rem; padding: 0.15rem 0.4rem; }}
+
     .story-hook {{
-        background-color: {OCHRE_LIGHT};
-        border-left: 4px solid {OCHRE};
-        padding: 1rem 1.25rem;
-        border-radius: 0.4rem;
-        color: {INK};
-        margin-bottom: 1.2rem;
+        background-color: {OCHRE_LIGHT}; border-left: 4px solid {OCHRE};
+        padding: 1.1rem 1.4rem; border-radius: 0.4rem; color: {INK};
+        font-size: 1.3rem; line-height: 1.6; margin-bottom: 1.2rem;
     }}
     .takeaway-box {{
-        background-color: white;
-        border: 1px solid {MIST};
-        border-left: 4px solid {SLATE};
-        padding: 1rem 1.25rem;
-        border-radius: 0.4rem;
-        margin-top: 1rem;
+        background-color: white; border: 1px solid {MIST}; border-left: 4px solid {SLATE};
+        padding: 1.1rem 1.4rem; border-radius: 0.4rem; margin-top: 1rem;
+        font-size: 1.25rem; line-height: 1.6;
     }}
+    .takeaway-box p, .takeaway-box strong {{ color: {INK} !important; }}
+
+    [data-testid="stSidebar"] * {{ color: var(--text-color) !important; }}
+    [data-testid="stCaptionContainer"] {{ font-size: 1.0rem !important; }}
     </style>
     """,
     unsafe_allow_html=True,
 )
-
 # ==============================================================================
 # NAVIGATION — Five-Act Executive Narrative
 # ==============================================================================
+
 CHAPTERS = [
     "Act 1 · The Clinical Stakes (C1)",
     "Act 2 · The Pivot & Triage Trade-Off (C2)",
@@ -75,25 +77,51 @@ CHAPTERS = [
     "Act 5 · Pilot Decision & Next Steps",
 ]
 
+
+# ---- Sidebar: mode switch + cohort context only ----
+mode = st.sidebar.radio("Presentation mode", ["Audience briefing (simple)", "Internal review (technical)"])
 st.sidebar.markdown("### Decision Briefing")
 st.sidebar.caption("For UGCC Bed Managers & Orthopedic / Geriatric Service Directors")
-PANEL = st.sidebar.radio("Narrative Chapter", CHAPTERS)
-
-# Story progress indicator & sequential navigation
-idx = CHAPTERS.index(PANEL)
-st.sidebar.progress((idx + 1) / len(CHAPTERS))
-st.sidebar.caption(f"Chapter {idx + 1} of {len(CHAPTERS)}")
 st.sidebar.markdown("---")
 st.sidebar.caption(
-    "**Cohort Scope:** 4,361 adult female hip-fracture discharges (ICD-10 S72.0–S72.1) "
+    "**Cohort Scope:** 4,361 adult female hip-fracture discharges (S72.00, S72.10) "
     "across Chilean high-complexity public hospitals (FONASA, 2019–2024). "
     "All metrics trace directly to verified C1/C2/W3 outputs."
 )
 
+if mode.startswith("Internal"):
+    # Internal review keeps free jump-to-any-Act navigation for Q&A
+    st.sidebar.markdown("---")
+    jump = st.sidebar.radio("Jump to Act", CHAPTERS, index=st.session_state.get("act_idx", 0))
+    st.session_state.act_idx = CHAPTERS.index(jump)
+
+if "act_idx" not in st.session_state:
+    st.session_state.act_idx = 0
+
+PANEL = CHAPTERS[st.session_state.act_idx]
+
+st.progress((st.session_state.act_idx + 1) / len(CHAPTERS))
+st.caption(f"Chapter {st.session_state.act_idx + 1} of {len(CHAPTERS)}")
+
+if "act_idx" not in st.session_state:
+    st.session_state.act_idx = 0
+
+
+#st.markdown("---")
+col_prev, col_mid, col_next = st.columns([1, 4, 1])
+with col_prev:
+    if st.button("← Back", disabled=st.session_state.act_idx == 0):
+        st.session_state.act_idx -= 1
+        st.rerun()
+with col_next:
+    if st.button("Next →", disabled=st.session_state.act_idx == len(CHAPTERS) - 1):
+        st.session_state.act_idx += 1
+        st.rerun()
+
 
 def chapter_footer(prev_summary: str, next_prompt: str):
     """Consistent narrative bridge at the bottom of every chapter."""
-    st.markdown("---")
+    #st.markdown("---")
     c1, c2 = st.columns([1.2, 1])
     with c1:
         st.markdown(f"**Where we stand:** {prev_summary}")
@@ -111,7 +139,7 @@ if PANEL.startswith("Act 1"):
         """
         <div class="story-hook">
         <strong>The Bed-Management Dilemma:</strong> Across 154,431 female public-hospital discharges (2019–2024),
-        hip fracture (ICD-10 S72) stands out as the leading diagnosis among women aged 75+ and carries a direct
+        hip fracture (S72) stands out as the leading diagnosis among women aged 75+ and carries a direct
         operational lever: <em>if we knew at admission who would stay beyond 15 days, UGCC teams could activate
         home-hospitalization and rehab pathways on Day 1 instead of Day 14.</em>
         </div>
@@ -159,12 +187,13 @@ if PANEL.startswith("Act 1"):
         st.pyplot(fig)
 
     st.markdown(
-        """
+        f"""
         <div class="takeaway-box">
-        <strong>What the EDA reveals:</strong> On the surface, median stay drops from 25.5 days (ages 18–29) to
+        <p style="color: {INK}; margin: 0;"><strong>What the EDA reveals:</strong> On the surface, median stay drops from 25.5 days (ages 18–29) to
         13.0 days (ages 90+). That isn't faster recovery — in-hospital mortality climbs to 10.4% in the 90+
         bracket alongside higher transfers to home-hospitalization pathways. Meanwhile, <strong>42.4% of all
         episodes</strong> still exceed 15 days, tying up acute orthopedic beds.
+        </p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -255,7 +284,7 @@ elif PANEL.startswith("Act 2"):
         m1, m2 = st.columns(2)
         m1.metric("Prolonged Stays Caught", f"{recall*100:.1f}%", "594 of 667 cases")
         m2.metric("Flagged Precision", f"{precision*100:.1f}%", f"{total_flags:,} total flags")
-        st.metric("Test ROC-AUC (Ranking Power)", "0.669", "Validation AUC: 0.675 (LR) / 0.661 (CatBoost)")
+        st.metric("How well it ranks risk", "Good, not perfect", "Confirmed two different ways")
 
         st.markdown(
             """
@@ -293,17 +322,16 @@ elif PANEL.startswith("Act 3"):
     model_view = st.radio(
         "Inspect admission-time drivers via:",
         [
-            "Selected Classifier: Standardized Log-Odds Direction (Logistic Regression, Val AUC = 0.675)",
-            "Tree Comparison: Raw Split Importance (CatBoost, Val AUC = 0.661)",
+            "Which direction each factor pushes risk",
+            "Which factors the computer leaned on most",   # also drop the leftover "Tree Comparison:" prefix, see below
         ],
         horizontal=True,
     )
-
     col1, col2 = st.columns(2)
 
     with col1:
         fig, ax = plt.subplots(figsize=(6.4, 4.7))
-        if model_view.startswith("Selected"):
+        if model_view.startswith("Which direction"):
             labels = [
                 "Primary Diagnosis (ICD_SUBTYPE_TE)",
                 "Same Commune (MISMA_COMUNA)",
@@ -367,7 +395,7 @@ elif PANEL.startswith("Act 3"):
 
         bars = ax.bar(models, aucs, color=[OCHRE, SLATE_SOFT], width=0.40)
         ax.axhline(0.500, color=INK, linestyle="--", linewidth=1.1)
-        ax.text(0.50, 0.512, "Random Chance Baseline (0.500)", ha="center", fontsize=8.5, fontweight="bold", color=INK)
+        ax.text(0.50, 0.512, "Random Chance Baseline (0.500)", ha="center", fontsize=6.0, fontweight="bold", color=INK)
 
         for idx_b, bar in enumerate(bars):
             h = bar.get_height()
@@ -394,16 +422,17 @@ elif PANEL.startswith("Act 3"):
         )
 
     st.markdown(
-        """
+        f"""
         <div class="takeaway-box">
-        <strong>What this means in practice:</strong> Two clinically identical 82-year-old women receive very
-        different risk scores depending on which hospital they enter (for example, median stays exceed 35–45 days in
-        Valparaíso and Antofagasta vs. ~16 days in Osorno or San Ramón). Furthermore, age carries a <em>negative</em>
-        standardized coefficient (−0.202) because older patients experience higher early mortality and faster
-        home-hospitalization transfers rather than surviving into multi-week inpatient stays.
+        <p style="color: {INK}; margin: 0;">
+        <strong style="color: {INK};">What this means in practice:</strong> Two clinically identical 82-year-old
+        women receive very different risk scores depending on which hospital they enter. Age also carries a
+        negative standardized coefficient, consistent with older patients experiencing higher early mortality
+        and faster transfer to home-hospitalization rather than prolonged inpatient stays.
+        </p>
         </div>
         """,
-        unsafe_allow_html=True,
+    unsafe_allow_html=True,
     )
 
     chapter_footer(
@@ -515,8 +544,9 @@ elif PANEL.startswith("Act 4"):
             "weight, `0.247`) and `INDICE_CHARLSON` improved 2022 validation error to `10.43` days — but degraded "
             "2023–2024 test error to **`9.13` days** (worse than guessing the median `8.93`). Recorded comorbidity "
             "burden doubled in median Charlson score (`1.0 → 2.0`) between 2022 and 2023–2024, causing a static "
-            "model trained on 2019–2021 to systematically over-predict stays. Moreover, GRD comorbidity fields are "
-            "coded at *discharge*, not admission."
+            "model trained on 2019–2021 to systematically over-predict stays."
+            "Moreover, whether GRD comorbidity fields are available at admission or only finalized at discharge "
+            "remains unconfirmed in the documentation available to this team — flagged as an open question since W2, not assumed either way."
         )
 
     chapter_footer(
@@ -530,7 +560,15 @@ elif PANEL.startswith("Act 4"):
 # ==============================================================================
 else:
     st.caption("ACT 5 OF 5 · EXECUTIVE RECOMMENDATION & GUARDRAILS")
-    st.title("Deploy as a Facility-Aware Triage Alert — Not an Individual Clinical Prognosis")
+    st.title("Which Hospital You're Admitted To Matters More Than Almost Anything Else We Checked")
+    st.markdown(
+        """
+        We tested this two different ways — both agreed: once we remove information about which
+        hospital and area a patient comes from, the tool's ability to tell high-risk from low-risk
+        patients almost disappears. Removing that information cut its accuracy by roughly 80%,
+        consistently across both methods we tried.
+        """
+    )
     st.markdown(
         """
         <div class="story-hook">
@@ -555,13 +593,20 @@ else:
         )
 
     with c2:
-        st.markdown("#### 2 · Honest Guardrails (W3 Limits)")
+        st.markdown("#### 2 · Honest Guardrails")
         st.markdown(
-            """
-            - **Institutional proxy bias:** **85%** of ranking lift comes from hospital/commune identity (`COMUNA_ESTAB_TE`). Two identical patients get different scores at different hospitals.
-            - **High false-alarm volume:** Flags **1,503** of `1,917` patients (`78%`), requiring a lightweight screening workflow rather than intensive case management for every flag.
-            - **Post-COVID base-rate shift:** Prolonged-stay prevalence fell from `42.4%` (2019–2022) to `34.8%` (2023–2024), lowering test precision to `39.5%`.
-            """
+            f"""
+            - **Institutional proxy bias:** Roughly 80% of the tool's ranking power comes from hospital and
+            location identity, confirmed two different ways. Two clinically identical patients can get
+            very different risk scores depending only on which hospital they're admitted to.
+            - **High false-alarm volume:** Flags <code>1,503</code> of <code>1,917</code> patients
+            (<code>78%</code>), requiring a lightweight screening workflow rather than intensive case
+            management for every flag.
+            - **Untested over time:** We have not yet checked whether the tool's accuracy is stable from
+            year to year — before a pilot, we would validate it on the most recent discharges and
+            recalibrate if needed.
+            """,
+            unsafe_allow_html=True,
         )
 
     with c3:
