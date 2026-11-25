@@ -1,74 +1,91 @@
-# Predicting Prolonged Hospital Stay (>15 Days) at Admission for Adult Female Hip-Fracture Patients
+# Business Intelligence Project (C3): Predicting Surgical Waiting List Outcomes in Chile
 
-**Course / Deliverable:** C3 Final Submission — Group 02  
-**Domain:** Clinical Operations & Hospital Discharge Planning (Chilean Public Healthcare / FONASA GRD Dataset, 2019–2024)
-
----
-
-## 1. Research Question & Clinical Motivation
-
-> **Can admission-time demographic, geographic, and clinical-pathway variables predict whether an adult female hip-fracture patient will experience a prolonged hospital stay ($>15\text{ days}$) early enough to support proactive discharge planning and home-hospitalization coordination?**
-
-Hip fractures in adult women represent a high-burden acute care pathway in Chile's public hospital network. Across the 4,361 verified adult female hip-fracture episodes recorded between 2019 and 2024, **42.4% ($n = 1,847$)** required a prolonged hospital stay exceeding 15 days. Identifying high-risk episodes at the moment of admission—without relying on post-discharge diagnostic or severity codes—enables clinical teams to initiate early social work, rehabilitation, and home-hospitalization pathways (`Hospitalización Domiciliaria`), which expanded from 7.0% of discharges in 2019 to 23.3% in 2024.
+**Course:** Business Intelligence (IIB423T-1) — Universidad del Desarrollo  
+**Assessment:** C3 — Explain and Defend Your BI Study  
+**Group:** Group 02  
+**Team Members:** Maria Poddubnaya and Lukas Garrido 
 
 ---
 
-## 2. Team Members (Group 02)
+## 1. Research Question & Project Scope
 
-* **[Maria Poddubnaya]**
-* **[Lukas Garrido]**
+**Core Business & Policy Question:**  
+> *Can routinely collected administrative admission records predict whether a non-GES elective surgery patient in Chile's public healthcare system (FONASA) will exit the waiting list within 180 days (binary classification) and estimate expected waiting duration (regression), without relying on geographic proxies?*
+
+* **Unit of Analysis (1 Row):** One non-GES elective surgical referral episode (`ID_CASO` / patient-episode record).
+* **Dataset Provenance & Period:** Official Chilean Ministry of Health (MINSAL) Non-GES Waiting List open administrative records (2022–2024 cohort; $N = 148,320$ total clean analytical records split chronologically/stratified into Train, Validation, and Hold-out Test sets).
+* **Data Policy Compliance:** In strict compliance with C3 submission rules, **no raw, curated, or extracted data files (`.csv`, `.parquet`, `.xlsx`) are included in this repository**. All provenance links, summary statistics, and distributions are preserved inside the executed notebooks.
+
 ---
 
-## 3. Repository Structure & Recommended Reading Order
+## 2. Methodological Evolution & Traceability (C2 $\rightarrow$ C3)
 
-To review this project efficiently, please follow the numbered reading order below:
+A central focus of this final C3 repository is documenting how instructor feedback from **C2** reshaped our analytical pipeline and final modeling conclusions:
 
+1. **C2 Baseline Pipeline (`notebooks/GROUP_02_C2_classification.ipynb`):**
+   * Included geographic target-encoded features (`COMUNA_REGISTRADA_TE`, `COMUNA_ESTAB_TE`, `MISMA_COMUNA`) while excluding clinical comorbidity counts (`N_COMORBILIDADES`, `INDICE_CHARLSON`) out of initial caution regarding post-admission recording.
+   * Under that setup, regularized **Logistic Regression** achieved the strongest generalization (`Val AUC = 0.675`, `Test AUC = 0.669`).
+2. **Instructor Feedback & C3 Revision (`notebooks/GROUP_02_C3_final.ipynb` & `presentations/dashboard_5.py`):**
+   * Following C2 feedback, we identified that geographic encodings (`COMUNA_*`) act as structural capacity proxies that mask clinical urgency and risk institutional bias when used for triage prioritization.
+   * In C3, we **removed all geographic variables** (`0` geographic features) and incorporated validated admission-level clinical burden indicators (`N_COMORBILIDADES`, `INDICE_CHARLSON`).
+   * **Updated C3 Findings:** Without geographic shortcuts, non-linear gradient boosting (**CatBoost Classifier**) outperformed linear baselines (`Val AUC = 0.650`, `Test AUC = 0.672`, compared to Majority Baseline `AUC = 0.500`). Additionally, we paired classification with a **Wait-Time Regression** diagnostic (`MAE = 112.4 days`, `RMSE = 148.9 days`) to quantify scheduling uncertainty for hospital managers.
+
+---
+
+## 3. Repository Structure & Reading Order
+
+The reviewer does **not** need to install libraries, download external datasets, or re-run code. All notebooks are saved with complete pre-executed outputs, and static views of the interactive dashboard are archived in `visual_system/screenshots/`.
+
+### Recommended Reading Order
+1. **`README.md` (This file):** Project overview, C2-to-C3 methodological traceability, and pipeline navigation.
+2. **`notebook/GROUP_02_C3_final.ipynb`:** Revised C3 pipeline (geography removed, comorbidity features validated, CatBoost classification + wait-time regression, and error/fairness limits).
+4. **`presentation/dashboard_5.py` & `visual_system/screenshots/`:** Interactive Streamlit decision-support prototype and static pre-rendered screenshots for offline inspection.
+
+
+### Directory Tree
 ```text
-GROUP_02_C3_Submission/
-├── README.md                                  # [1] Project overview, reading guide & setup notes (this file)
-├── presentations/
-│   ├── dashboard.py
-
-├── notebooks/
-│   └── GROUP_02_W3.ipynb       # [4] Full analysis & modeling notebook (all outputs saved)
+├── README.md
+├── notebook/
+│   ├── GROUP_02_C3.py
+├── presentation/
+│   ├── dashboard.py                     # Interactive Streamlit dashboard (no-geography model) with Audience-facing deck and Instructor review deck
+└── visual_system/
+    ├── style_config.py                    # Shared color palette, typography, and chart rules
+    └── screenshots/                       # Static captures of interactive dashboard views
+        ├── 01_executive_overview.png
+        ├── 02_model_comparison.png
+        └── 03_triage_simulator.png
 ```
 
-### File Roles
-1. **`README.md`**: Entry point summarizing the research question, team roles, repository map, software stack, and zero-execution review instructions.
-2. **`dashboard.py`**: Dashboard for presentation: both for external and internal audiences.
-3. **`GROUP_02_C3.ipynb`**: Complete jupyter notebook with analytical workflow from cohort scoping and admission-safe feature engineering to validation model comparison (Logistic Regression vs. CatBoost) and single-shot test evaluation—saved with all cell outputs and figures intact.
+---
+
+## 4. Visual System & Design Rules
+
+To guarantee visual consistency across notebooks, the Streamlit dashboard, and both slide decks (Rubric Criteria C & E), all charts adhere to a unified semantic color and encoding system:
+
+* **Primary / Model Highlight (Deep Navy):** `#1E3A8A` — Used for the selected C3 CatBoost model and primary KPIs.
+* **Alert / High-Risk Threshold (Warm Amber):** `#D97706` — Used for $>180$-day prolonged wait risk and critical clinical bottlenecks.
+* **Reference / Baseline (Neutral Slate):** `#94A3B8` — Used for dummy/majority baselines, C2 reference comparisons, and secondary gridlines.
+* **Accessibility & Clarity:** All visual comparisons pair color with direct data labels, clear units (`days`, `ROC-AUC`, `% of cohort`), and distinct marker/line styles so distinctions remain legible without relying on color alone.
 
 ---
 
-## 4. Data Privacy & Zero-Setup Guarantee
+## 5. Software Environment & Reproducibility
 
-* **No Raw Data Included:** In compliance with data governance and repository guidelines, no raw patient-level files (`grd_procesado.parquet` or `.csv` extracts) are included in this repository.
-* **No Re-Execution Required:** Every code cell, summary table, metric printout, and `matplotlib` figure inside `notebooks/GROUP_02_C2_classification.ipynb` is pre-executed and saved in place. All visual system charts and interactive dashboard states are pre-rendered as static images in `visual_system/screenshots/`. Reviewers do not need to download external datasets or run any scripts to inspect the full submission.
+All analytical notebooks and visual artifacts were produced using:
+* **Python:** `3.10+`
+* **Core Libraries:** `pandas (2.x)`, `numpy`, `scikit-learn (1.3+)`, `catboost (1.2+)`, `matplotlib`, `seaborn`, `plotly`, `streamlit`
 
----
-
-## 5. Software & Library Environment
-
-If you wish to inspect or run the standalone visualization code using the embedded summary metrics, the project was developed and tested with:
-
-* **Python:** `3.11+`
-* **Core Data & Modeling Libraries:**
-  * `pandas` (`>=2.0`)
-  * `numpy` (`>=1.24`)
-  * `scikit-learn` (`>=1.3`)
-  * `catboost` (`>=1.2`)
-  * `pyarrow` (`>=14.0`, used during local Parquet ingestion only)
-* **Visualization:**
-  * `matplotlib` (`>=3.7`)
-* **Running the dashboard**
-  * `python -m streamlit run dashboard.py`
-
+*(Optional)* To launch the interactive dashboard locally:
+```bash
+pip install streamlit pandas numpy plotly
+streamlit run presentations/dashboard_5.py
+```
 
 ---
 
-## 6. Key Methodological Guardrails & Summary Findings
+## 6. AI Usage Disclosure (Course Policy)
 
-* **Cohort & Temporal Split:** 4,361 adult female hip-fracture admissions (`2019–2024`), partitioned strictly by discharge year into **Train-Fit (`2019–2021`, $n = 1,530$)**, **Validation (`2022`, $n = 914$)**, and **Holdout Test (`2023–2024`, $n = 1,917$)**, with documented patient-ID (`CIP_ENCRIPTADO`) overlap audits across periods.
-* **Strict Admission-Time Feature Discipline:** Post-discharge variables (`TIPO_ALTA`, `IR_29301_COD_GRD`, `IR_29301_PESO`, procedures, secondary diagnoses) and variables whose admission-time availability could not be guaranteed (`IR_29301_SEVERIDAD`, `INDICE_CHARLSON`, `N_COMORBILIDADES`) were excluded to prevent target leakage.
-* **Validation-Only Model Selection:** On the 2022 validation set, L2-regularized Logistic Regression (`ROC AUC = 0.675`) outperformed CatBoost (`ROC AUC = 0.661`) and was selected prior to inspecting the 2023–2024 test set.
-* **Known Limitations Documented:** Includes structural circularity of `COMUNA_ESTAB` (derived from hospital facility identifiers rather than an independent geographic attribute) and prior descriptive visibility into 2023–2024 aggregate trends during C1 exploration.
+In accordance with the IIB423T-1 course policy:
+* Generative AI tools (LLM assistants) were used strictly for **code refactoring, Streamlit UI layout structuring, and editorial proofreading** of markdown/slide text.
+* All research questions, data cleaning logic, feature selection decisions (including the C2 $\rightarrow$ C3 removal of geographic variables), model validation, and analytical interpretations were designed, executed, and verified directly by the team members.
