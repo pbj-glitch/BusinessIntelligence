@@ -35,11 +35,8 @@ GROUP_02_C3_Submission/
 
 ### File Roles
 1. **`README.md`**: Entry point summarizing the research question, team roles, repository map, software stack, and zero-execution review instructions.
-2. **`presentations/Presentation_1_External_Audience.pdf`**: Plain-language presentation designed for hospital administrators and orthopedic/geriatric care coordinators, translating model thresholds into bed-capacity and home-hospitalization workflows.
-3. **`presentations/Presentation_2_Internal_Review.pdf`**: Technical deep dive covering the strict temporal split (`2019–2021` train, `2022` validation, `2023–2024` test), leakage prevention, validation-only model selection, and methodological limitations.
-4. **`notebooks/GROUP_02_C2_classification.ipynb`**: Complete Python analytical workflow—from cohort scoping and admission-safe feature engineering to validation model comparison (Logistic Regression vs. CatBoost) and single-shot test evaluation—saved with all cell outputs and figures intact.
-5. **`visual_system/generate_charts.py` & `dashboard.html`**: Reproducible visualization code and interactive view built exclusively from saved summary tables and model evaluation metrics (zero patient-level records).
-6. **`visual_system/screenshots/`**: High-resolution `.png` captures of every figure and every interactive dashboard state for immediate visual inspection.
+2. **`dashboard.py`**: Dashboard for presentation: both for external and internal audiences.
+3. **`GROUP_02_C3.ipynb`**: Complete jupyter notebook with analytical workflow from cohort scoping and admission-safe feature engineering to validation model comparison (Logistic Regression vs. CatBoost) and single-shot test evaluation—saved with all cell outputs and figures intact.
 
 ---
 
@@ -64,10 +61,8 @@ If you wish to inspect or run the standalone visualization code using the embedd
 * **Visualization:**
   * `matplotlib` (`>=3.7`)
 * **Running the dashboard**
-'''bash
-python -m streamlit run dashboard.py
+  * `python -m streamlit run dashboard.py`
 
-'''
 
 ---
 
